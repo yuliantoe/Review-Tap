@@ -1,0 +1,8 @@
+{
+  "name": "ReviewTap - Aktivasi Kartu NFC & QR Ulasan Google",
+  "description": "Platform aktivasi dan analitik kartu NFC dan QR untuk ulasan Google Bisnis. Pengalihan cepat, pemantauan scan 14 hari, dan simulasi pelanggan.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
