@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useReviewTap } from '../context/ReviewTapContext';
-import { ShieldCheck, Lock, User, Eye, EyeOff, ArrowRight, X, AlertCircle, KeyRound, Sparkles } from 'lucide-react';
+import { ShieldCheck, Lock, User, Eye, EyeOff, ArrowRight, X, AlertCircle } from 'lucide-react';
 
 export const AdminLoginModal: React.FC = () => {
   const { isLoginModalOpen, closeLoginModal, loginAdmin } = useReviewTap();
 
-  const [username, setUsername] = useState<string>('admin');
+  const [username, setUsername] = useState<string>('');
   const [password, setPassword] = useState<string>('');
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -36,11 +36,6 @@ export const AdminLoginModal: React.FC = () => {
     }, 200);
   };
 
-  const handleFillDemoCreds = () => {
-    setUsername('admin');
-    setPassword('admin123');
-    setErrorMessage(null);
-  };
 
   return (
     <div
@@ -95,25 +90,6 @@ export const AdminLoginModal: React.FC = () => {
             </div>
           )}
 
-          {/* Quick Preset Credentials Chip */}
-          <div className="p-3 bg-blue-50/80 border border-blue-100 rounded-xl space-y-2">
-            <div className="flex items-center justify-between text-xs">
-              <span className="font-medium text-blue-900 flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-blue-600" />
-                <span>Kredensial Akses Administrator:</span>
-              </span>
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                onClick={handleFillDemoCreds}
-                className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold bg-white text-blue-700 hover:bg-blue-600 hover:text-white border border-blue-200 rounded-lg shadow-2xs transition-all cursor-pointer"
-              >
-                <KeyRound className="w-3 h-3" />
-                <span>Klik untuk Isi: admin / admin123</span>
-              </button>
-            </div>
-          </div>
 
           {/* Username Field */}
           <div className="space-y-1.5">

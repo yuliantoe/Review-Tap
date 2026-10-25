@@ -20,11 +20,13 @@ import {
   Link2,
   Sparkles,
   Check,
+  Printer,
 } from 'lucide-react';
 import { BatchGeneratorModal } from './BatchGeneratorModal';
 import { CardQrModal } from './CardQrModal';
 import { ActivateCardModal } from './ActivateCardModal';
 import { EditCardLinkModal } from './EditCardLinkModal';
+import { DownloadAllQrModal } from './DownloadAllQrModal';
 
 export const CardManagementView: React.FC = () => {
   const {
@@ -48,6 +50,8 @@ export const CardManagementView: React.FC = () => {
   const [activeQrModalCard, setActiveQrModalCard] = useState<Card | null>(null);
   const [activeActivateCard, setActiveActivateCard] = useState<Card | null>(null);
   const [cardToEditLink, setCardToEditLink] = useState<Card | null>(null);
+  const [isDownloadAllModalOpen, setIsDownloadAllModalOpen] = useState(false);
+  const [batchCodesToDownload, setBatchCodesToDownload] = useState<string[] | undefined>(undefined);
 
   // Filtered Cards
   const filteredCards = cards.filter((c) => {
@@ -84,17 +88,30 @@ export const CardManagementView: React.FC = () => {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <button
+            type="button"
             onClick={() => exportCsv('cards')}
-            className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 rounded-lg shadow-xs transition-colors"
+            className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 rounded-lg shadow-xs transition-colors cursor-pointer"
           >
             <Download className="w-3.5 h-3.5" />
             <span>Ekspor CSV</span>
           </button>
           <button
+            type="button"
+            onClick={() => {
+              setBatchCodesToDownload(undefined);
+              setIsDownloadAllModalOpen(true);
+            }}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-blue-700 bg-blue-50 border border-blue-200 hover:bg-blue-100 rounded-lg shadow-2xs transition-colors cursor-pointer"
+          >
+            <Printer className="w-3.5 h-3.5 text-blue-600" />
+            <span>Unduh / Cetak Semua QR</span>
+          </button>
+          <button
+            type="button"
             onClick={() => setIsBatchModalOpen(true)}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-xs transition-colors"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-xs transition-colors cursor-pointer"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>Buat Batch Kartu</span>
@@ -374,6 +391,10 @@ export const CardManagementView: React.FC = () => {
         <BatchGeneratorModal
           onClose={() => setIsBatchModalOpen(false)}
           onSuccess={() => {}}
+          onDownloadBatch={(batchCodes) => {
+            setBatchCodesToDownload(batchCodes);
+            setIsDownloadAllModalOpen(true);
+          }}
         />
       )}
 
@@ -404,6 +425,18 @@ export const CardManagementView: React.FC = () => {
           onSimulate={(code) => {
             simulateScan(code, cardToEditLink.tipe === 'qr' ? 'qr' : 'nfc');
             setActiveTab('simulator');
+          }}
+        />
+      )}
+
+      {isDownloadAllModalOpen && (
+        <DownloadAllQrModal
+          cards={cards}
+          businesses={businesses}
+          initialFilter={batchCodesToDownload || 'all'}
+          onClose={() => {
+            setIsDownloadAllModalOpen(false);
+            setBatchCodesToDownload(undefined);
           }}
         />
       )}

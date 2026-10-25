@@ -92,11 +92,6 @@ const MainContent: React.FC = () => {
               </p>
             </div>
 
-            <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 text-xs text-slate-600 space-y-1">
-              <span className="font-semibold text-slate-800 block text-[11px]">Kredensial Bawaan:</span>
-              <p className="font-mono text-[11px] text-blue-700">Username: admin · Password: admin123</p>
-            </div>
-
             <div className="flex flex-col sm:flex-row items-center justify-center gap-2.5 pt-2">
               <button
                 onClick={() => setActiveTab('activation')}
