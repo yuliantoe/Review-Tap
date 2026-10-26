@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useReviewTap } from '../context/ReviewTapContext';
 import { ScanSource, DeviceType, Card } from '../types';
+import { getCardTargetPayload } from '../utils/cardUrlHelper';
 import {
   Smartphone,
   Radio,
@@ -257,20 +258,28 @@ export const CustomerSimulatorView: React.FC = () => {
           </div>
 
           {/* Target link preview */}
-          <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg text-xs space-y-1 font-mono">
-            <span className="text-[10px] text-slate-400 uppercase tracking-wider block font-sans">
-              Payload URL Server:
-            </span>
-            <div className="text-slate-800 break-all select-all">
-              https://reviewtap.id/r/{selectedCode}?s={source === 'nfc' ? 'nfc' : 'qr'}
-            </div>
-          </div>
+          {(() => {
+            const biz = businesses.find((b) => b.id === currentCard?.business_id);
+            const payload = currentCard ? getCardTargetPayload(currentCard, biz, source) : null;
+            return (
+              <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg text-xs space-y-1 font-mono">
+                <span className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider block font-sans">
+                  {payload?.isBeforeActivation
+                    ? '⚡ Link Sebelum Aktivasi (Langsung ke Web Aktivasi):'
+                    : '🌐 Link Tautan Google Review:'}
+                </span>
+                <div className="text-slate-800 break-all select-all font-bold">
+                  {payload?.url || `https://reviewtap.id/r/${selectedCode}`}
+                </div>
+              </div>
+            );
+          })()}
 
           {/* Action Button */}
           <button
             onClick={() => runSimulation()}
             disabled={isSimulating}
-            className="w-full py-3 px-4 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 active:scale-[0.99] rounded-lg shadow-sm transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+            className="w-full py-3.5 px-6 text-sm font-semibold text-white bg-[#FF6B35] hover:bg-[#F25A24] active:scale-[0.99] rounded-full shadow-md shadow-orange-500/25 transition-all flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
           >
             {isSimulating ? (
               <span className="animate-pulse">Menghubungkan ke Server...</span>

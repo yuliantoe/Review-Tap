@@ -21,6 +21,8 @@ import {
   Sparkles,
   Check,
   Printer,
+  KeyRound,
+  MessageCircle,
 } from 'lucide-react';
 import { BatchGeneratorModal } from './BatchGeneratorModal';
 import { CardQrModal } from './CardQrModal';
@@ -38,6 +40,8 @@ export const CardManagementView: React.FC = () => {
     exportCsv,
     setActiveTab,
     simulateScan,
+    setScannedNfcCode,
+    setIsAdminMode,
   } = useReviewTap();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -92,7 +96,7 @@ export const CardManagementView: React.FC = () => {
           <button
             type="button"
             onClick={() => exportCsv('cards')}
-            className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 rounded-lg shadow-xs transition-colors cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-stone-700 bg-white border border-stone-200 hover:bg-stone-50 rounded-full shadow-2xs transition-colors cursor-pointer"
           >
             <Download className="w-3.5 h-3.5" />
             <span>Ekspor CSV</span>
@@ -103,15 +107,15 @@ export const CardManagementView: React.FC = () => {
               setBatchCodesToDownload(undefined);
               setIsDownloadAllModalOpen(true);
             }}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-blue-700 bg-blue-50 border border-blue-200 hover:bg-blue-100 rounded-lg shadow-2xs transition-colors cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-[#FF6B35] bg-[#FFF0EB] border border-[#FFD9CC] hover:bg-[#FFE4DB] rounded-full shadow-2xs transition-colors cursor-pointer"
           >
-            <Printer className="w-3.5 h-3.5 text-blue-600" />
+            <Printer className="w-3.5 h-3.5 text-[#FF6B35]" />
             <span>Unduh / Cetak Semua QR</span>
           </button>
           <button
             type="button"
             onClick={() => setIsBatchModalOpen(true)}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-xs transition-colors cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-[#FF6B35] hover:bg-[#F25A24] rounded-full shadow-sm shadow-orange-500/25 transition-all hover:scale-[1.01] cursor-pointer"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>Buat Batch Kartu</span>
@@ -120,16 +124,16 @@ export const CardManagementView: React.FC = () => {
       </div>
 
       {/* Info Callout: Tag NFC & QR tidak perlu dicetak ulang jika ganti link ulasan */}
-      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200/80 rounded-xl p-4 flex items-start gap-3 text-xs text-blue-950">
-        <Sparkles className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
+      <div className="bg-[#FFF8F5] border border-orange-200/70 rounded-2xl p-4 flex items-start gap-3 text-xs text-stone-900">
+        <Sparkles className="w-5 h-5 text-[#FF6B35] shrink-0 mt-0.5" />
         <div className="space-y-1">
-          <p className="font-bold text-blue-950 flex items-center gap-2">
+          <p className="font-bold text-stone-900 flex items-center gap-2">
             <span>QR Code & Tag NFC Dinamis (Link Review Dapat Diganti Kapan Saja)</span>
-            <span className="text-[10px] bg-blue-100 text-blue-800 font-semibold px-2 py-0.5 rounded-full border border-blue-200">
+            <span className="text-[10px] bg-[#FFF0EB] text-[#FF6B35] font-semibold px-2.5 py-0.5 rounded-full border border-[#FFD9CC]">
               Tanpa Cetak Ulang
             </span>
           </p>
-          <p className="text-blue-800 leading-relaxed text-[11px]">
+          <p className="text-stone-600 leading-relaxed text-[11px]">
             Kartu fisik atau stand akrilik yang <strong>sudah dicetak QR code-nya tetap valid selamanya</strong>. Jika bisnis pindah tempat, berganti cabang, atau memiliki tautan review baru, Anda cukup mengklik tombol <strong>&ldquo;Ganti Link Review&rdquo;</strong> pada daftar kartu di bawah ini. Pengunjung yang menempelkan NFC atau memindai QR code akan otomatis diarahkan ke tautan Google Review baru secara instan!
           </p>
         </div>
@@ -221,6 +225,7 @@ export const CardManagementView: React.FC = () => {
                 <th className="py-3 px-4">Kode Kartu</th>
                 <th className="py-3 px-4">Tipe Hardware</th>
                 <th className="py-3 px-4">Bisnis / Link Google Review</th>
+                <th className="py-3 px-4">PIN NFC & WhatsApp</th>
                 <th className="py-3 px-4">Status</th>
                 <th className="py-3 px-4">Catatan</th>
                 <th className="py-3 px-4 text-right">Aksi</th>
@@ -302,6 +307,29 @@ export const CardManagementView: React.FC = () => {
                         )}
                       </td>
 
+                      {/* PIN NFC & WhatsApp Column */}
+                      <td className="py-3 px-4 whitespace-nowrap">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-1.5 font-mono text-[11px] text-blue-700 font-bold">
+                            <KeyRound className="w-3 h-3 text-blue-500" />
+                            <span>PIN: #{card.pin_nfc || '1234'}</span>
+                          </div>
+                          {card.no_wa || business?.no_wa ? (
+                            <a
+                              href={`https://wa.me/${(card.no_wa || business?.no_wa || '').replace(/[^0-9]/g, '')}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-700 hover:text-emerald-900 bg-emerald-50 hover:bg-emerald-100 px-1.5 py-0.5 rounded border border-emerald-200 transition-colors"
+                            >
+                              <MessageCircle className="w-3 h-3 text-emerald-600" />
+                              <span>{card.no_wa || business?.no_wa}</span>
+                            </a>
+                          ) : (
+                            <span className="text-[10px] text-slate-400 font-sans block">WA: Belum diisi</span>
+                          )}
+                        </div>
+                      </td>
+
                       {/* Status Dropdown */}
                       <td className="py-3 px-4 whitespace-nowrap">
                         <select
@@ -376,7 +404,7 @@ export const CardManagementView: React.FC = () => {
                 })
               ) : (
                 <tr>
-                  <td colSpan={6} className="py-8 text-center text-slate-400">
+                  <td colSpan={7} className="py-8 text-center text-slate-400">
                     Tidak ada kartu yang cocok dengan kriteria pencarian atau filter.
                   </td>
                 </tr>
@@ -408,6 +436,12 @@ export const CardManagementView: React.FC = () => {
             setActiveTab('simulator');
           }}
           onEditLink={(card) => setCardToEditLink(card)}
+          onOpenActivation={(code) => {
+            setActiveQrModalCard(null);
+            setScannedNfcCode(code);
+            setIsAdminMode(false);
+            setActiveTab('activation');
+          }}
         />
       )}
 

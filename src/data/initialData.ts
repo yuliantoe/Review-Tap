@@ -12,6 +12,7 @@ export const INITIAL_BUSINESSES: Business[] = [
     rating: 4.8,
     total_ulasan_google: 1420,
     dibuat: '2026-08-10T09:00:00Z',
+    no_wa: '081298765432',
   },
   {
     id: 'biz_02',
@@ -24,6 +25,7 @@ export const INITIAL_BUSINESSES: Business[] = [
     rating: 4.6,
     total_ulasan_google: 2890,
     dibuat: '2026-08-15T11:20:00Z',
+    no_wa: '081198761234',
   },
   {
     id: 'biz_03',
@@ -36,6 +38,7 @@ export const INITIAL_BUSINESSES: Business[] = [
     rating: 4.9,
     total_ulasan_google: 640,
     dibuat: '2026-09-01T14:30:00Z',
+    no_wa: '081388776655',
   },
   {
     id: 'biz_04',
@@ -48,6 +51,7 @@ export const INITIAL_BUSINESSES: Business[] = [
     rating: 4.9,
     total_ulasan_google: 380,
     dibuat: '2026-09-12T08:15:00Z',
+    no_wa: '081512345678',
   },
   {
     id: 'biz_05',
@@ -60,6 +64,7 @@ export const INITIAL_BUSINESSES: Business[] = [
     rating: 4.7,
     total_ulasan_google: 512,
     dibuat: '2026-09-20T10:00:00Z',
+    no_wa: '081876543210',
   },
 ];
 
@@ -73,6 +78,8 @@ export const INITIAL_CARDS: Card[] = [
     diaktifkan_pada: '2026-09-02T10:14:00Z',
     dibuat: '2026-08-28T08:00:00Z',
     catatan: 'Area meja kasir',
+    pin_nfc: '1234',
+    no_wa: '081298765432',
   },
   {
     code: 'R7T3P1',
@@ -82,6 +89,8 @@ export const INITIAL_CARDS: Card[] = [
     diaktifkan_pada: '2026-09-02T10:18:00Z',
     dibuat: '2026-08-28T08:00:00Z',
     catatan: 'Area pick-up barista',
+    pin_nfc: '4829',
+    no_wa: '081298765432',
   },
   {
     code: 'T2W8N5',
@@ -90,6 +99,8 @@ export const INITIAL_CARDS: Card[] = [
     status: 'aktif',
     diaktifkan_pada: '2026-09-10T16:40:00Z',
     dibuat: '2026-08-28T08:00:00Z',
+    pin_nfc: '5612',
+    no_wa: '081298765432',
   },
   // Resto Padang Sederhana
   {
@@ -100,6 +111,8 @@ export const INITIAL_CARDS: Card[] = [
     diaktifkan_pada: '2026-09-05T12:00:00Z',
     dibuat: '2026-09-01T08:00:00Z',
     catatan: 'Kasir pembayaran',
+    pin_nfc: '7721',
+    no_wa: '081198761234',
   },
   {
     code: 'S3M8V1',
@@ -108,6 +121,8 @@ export const INITIAL_CARDS: Card[] = [
     status: 'aktif',
     diaktifkan_pada: '2026-09-05T12:05:00Z',
     dibuat: '2026-09-01T08:00:00Z',
+    pin_nfc: '9034',
+    no_wa: '081198761234',
   },
   // Bumi Bakery
   {
@@ -117,6 +132,8 @@ export const INITIAL_CARDS: Card[] = [
     status: 'aktif',
     diaktifkan_pada: '2026-09-15T09:30:00Z',
     dibuat: '2026-09-10T08:00:00Z',
+    pin_nfc: '3319',
+    no_wa: '081388776655',
   },
   // Klinik Gigi Harmoni
   {
@@ -126,6 +143,8 @@ export const INITIAL_CARDS: Card[] = [
     status: 'aktif',
     diaktifkan_pada: '2026-09-18T14:00:00Z',
     dibuat: '2026-09-10T08:00:00Z',
+    pin_nfc: '8102',
+    no_wa: '081512345678',
   },
   // Batavia Barbershop
   {
@@ -135,6 +154,8 @@ export const INITIAL_CARDS: Card[] = [
     status: 'aktif',
     diaktifkan_pada: '2026-09-25T11:20:00Z',
     dibuat: '2026-09-20T08:00:00Z',
+    pin_nfc: '6543',
+    no_wa: '081876543210',
   },
   // Unactivated / Baru cards (Ready for activation test in customer simulation!)
   {
@@ -145,6 +166,7 @@ export const INITIAL_CARDS: Card[] = [
     diaktifkan_pada: null,
     dibuat: '2026-10-20T09:00:00Z',
     catatan: 'Belum terpasang bisnis, scan untuk aktivasi',
+    pin_nfc: '1234',
   },
   {
     code: 'N3W002',
@@ -154,6 +176,7 @@ export const INITIAL_CARDS: Card[] = [
     diaktifkan_pada: null,
     dibuat: '2026-10-20T09:00:00Z',
     catatan: 'Belum terpasang bisnis, siap kirim ke mitra',
+    pin_nfc: '5678',
   },
   // Nonaktif card
   {
@@ -164,6 +187,7 @@ export const INITIAL_CARDS: Card[] = [
     diaktifkan_pada: '2026-09-02T10:20:00Z',
     dibuat: '2026-08-28T08:00:00Z',
     catatan: 'Dinonaktifkan sementara karena diganti',
+    pin_nfc: '9999',
   },
   // Hilang card
   {
@@ -172,8 +196,9 @@ export const INITIAL_CARDS: Card[] = [
     tipe: 'nfc_qr',
     status: 'hilang',
     diaktifkan_pada: '2026-09-05T12:10:00Z',
-    dibuat: '2026-09-01T08:00:00Z',
+    dibuat: '2026-08-30T09:00:00Z',
     catatan: 'Dilaporkan rusak/hilang',
+    pin_nfc: '8888',
   },
 ];
 

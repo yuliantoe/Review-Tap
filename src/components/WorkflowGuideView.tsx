@@ -24,7 +24,7 @@ export const WorkflowGuideView: React.FC = () => {
       actor: 'Admin ReviewTap',
       role: 'Cetak & Tulis Tag',
       title: '01. Buat Batch & Tulis Hardware',
-      desc: 'Dashboard membuat kode unik 6 karakter per kartu. Admin menulis link pendek /r/KODE ke tag NFC (tipe NDEF URL) dan mencetak QR identik di kartu. Status kartu: Belum aktif.',
+      desc: 'Dashboard membuat kode unik 6 karakter per kartu. Sebelum diaktivasi, link QR code dan NFC langsung mengarah ke Web Aktivasi (?code=KODE) agar pemilik dapat langsung mengaktifkannya saat pertama kali diterima.',
       color: 'bg-blue-600',
     },
     {
@@ -38,7 +38,7 @@ export const WorkflowGuideView: React.FC = () => {
       actor: 'Pemilik Bisnis',
       role: 'Aktivasi Perdana',
       title: '03. Aktivasi Mandiri Lewat Ponsel',
-      desc: 'Pemilik menempelkan kartu ke ponselnya. Karena belum terpasang, link membuka halaman aktivasi ReviewTap. Pemilik memilih bisnisnya atau menempel Place ID lalu menekan Aktifkan.',
+      desc: 'Pemilik menempelkan kartu NFC atau memindai QR code. Link sebelum aktivasi langsung membuka halaman Web Aktivasi ReviewTap dengan kode kartu terisi otomatis. Pemilik mengisi nama toko & link Google Review.',
       color: 'bg-emerald-600',
     },
     {

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useReviewTap } from '../context/ReviewTapContext';
 import { Card } from '../types';
-import { X, CheckCircle, ShieldCheck } from 'lucide-react';
+import { X, CheckCircle, ShieldCheck, KeyRound, MessageCircle, Phone, RefreshCw } from 'lucide-react';
 
 interface ActivateCardModalProps {
   card: Card;
@@ -12,6 +12,8 @@ interface ActivateCardModalProps {
 export const ActivateCardModal: React.FC<ActivateCardModalProps> = ({ card, onClose, onSuccess }) => {
   const { businesses, activateCard } = useReviewTap();
   const [selectedBizId, setSelectedBizId] = useState<string>(businesses[0]?.id || '');
+  const [pinNfc, setPinNfc] = useState<string>(card.pin_nfc || '1234');
+  const [noWhatsApp, setNoWhatsApp] = useState<string>(card.no_wa || '');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
 
@@ -23,7 +25,10 @@ export const ActivateCardModal: React.FC<ActivateCardModalProps> = ({ card, onCl
 
     setIsSubmitting(true);
     setTimeout(() => {
-      const ok = activateCard(card.code, selectedBizId);
+      const ok = activateCard(card.code, selectedBizId, {
+        pinNfc: pinNfc.trim(),
+        noWa: noWhatsApp.trim(),
+      });
       setIsSubmitting(false);
       if (ok) {
         setSuccess(true);
@@ -93,8 +98,52 @@ export const ActivateCardModal: React.FC<ActivateCardModalProps> = ({ card, onCl
               </div>
             )}
 
-            {/* Submit Action */}
+            {/* PIN NFC & WhatsApp inputs */}
+            <div className="grid grid-cols-2 gap-2.5 pt-1">
+              <div className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-semibold text-slate-700 flex items-center gap-1">
+                    <KeyRound className="w-3.5 h-3.5 text-blue-600" />
+                    <span>PIN NFC Tag</span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setPinNfc(String(Math.floor(1000 + Math.random() * 9000)))}
+                    className="text-[10px] text-blue-600 hover:text-blue-800 flex items-center gap-0.5 cursor-pointer font-semibold"
+                  >
+                    <RefreshCw className="w-2.5 h-2.5" />
+                    <span>Acak</span>
+                  </button>
+                </div>
+                <input
+                  type="text"
+                  maxLength={8}
+                  value={pinNfc}
+                  onChange={(e) => setPinNfc(e.target.value.replace(/[^0-9]/g, ''))}
+                  placeholder="misal: 1234"
+                  className="w-full text-xs font-mono font-bold tracking-wider p-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 focus:outline-hidden focus:border-blue-500"
+                />
+              </div>
 
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-slate-700 flex items-center gap-1">
+                  <MessageCircle className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>No WhatsApp</span>
+                </label>
+                <div className="relative">
+                  <input
+                    type="tel"
+                    value={noWhatsApp}
+                    onChange={(e) => setNoWhatsApp(e.target.value)}
+                    placeholder="0812..."
+                    className="w-full text-xs font-medium p-2 pl-7 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 focus:outline-hidden focus:border-blue-500"
+                  />
+                  <Phone className="w-3 h-3 text-slate-400 absolute left-2 top-1/2 -translate-y-1/2" />
+                </div>
+              </div>
+            </div>
+
+            {/* Submit Action */}
             <div className="pt-2 flex items-center justify-end gap-2.5 border-t border-slate-100">
               <button
                 type="button"

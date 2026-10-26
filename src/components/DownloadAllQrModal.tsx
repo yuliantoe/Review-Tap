@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import QRCode from 'qrcode';
 import JSZip from 'jszip';
 import { Card, Business } from '../types';
@@ -10,12 +10,9 @@ import {
   CheckCircle2,
   Filter,
   FileArchive,
-  Layers,
-  Sparkles,
-  ExternalLink,
-  Star,
-  Radio,
 } from 'lucide-react';
+
+import { getCardTargetPayload } from '../utils/cardUrlHelper';
 
 interface DownloadAllQrModalProps {
   cards: Card[];
@@ -23,6 +20,53 @@ interface DownloadAllQrModalProps {
   onClose: () => void;
   initialFilter?: 'all' | 'baru' | 'aktif' | string[];
 }
+
+/**
+ * Generates a clean high-resolution PNG sticker (QR + Card Code only, no extra labels)
+ */
+const generateStickerPng = async (cardCode: string, qrDataUrl: string): Promise<string> => {
+  return new Promise((resolve) => {
+    const canvas = document.createElement('canvas');
+    const width = 600;
+    const height = 700;
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+      resolve(qrDataUrl);
+      return;
+    }
+
+    // White background
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, width, height);
+
+    // Subtle border / cut guideline
+    ctx.strokeStyle = '#e2e8f0';
+    ctx.lineWidth = 4;
+    ctx.strokeRect(10, 10, width - 20, height - 20);
+
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      // Draw QR Code centered (480 x 480)
+      ctx.drawImage(img, 60, 50, 480, 480);
+
+      // Draw Card Code (#CODE) only
+      ctx.fillStyle = '#0f172a';
+      ctx.font = 'bold 44px monospace, "Courier New", Courier';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(`#${cardCode}`, width / 2, 600);
+
+      resolve(canvas.toDataURL('image/png'));
+    };
+    img.onerror = () => {
+      resolve(qrDataUrl);
+    };
+    img.src = qrDataUrl;
+  });
+};
 
 export const DownloadAllQrModal: React.FC<DownloadAllQrModalProps> = ({
   cards,
@@ -33,7 +77,6 @@ export const DownloadAllQrModal: React.FC<DownloadAllQrModalProps> = ({
   const [filterType, setFilterType] = useState<'all' | 'baru' | 'aktif' | 'batch'>(
     Array.isArray(initialFilter) ? 'batch' : initialFilter
   );
-  const [layoutMode, setLayoutMode] = useState<'standee' | 'sticker'>('standee');
   const [isZipping, setIsZipping] = useState(false);
   const [zipProgress, setZipProgress] = useState<number>(0);
   const [qrImages, setQrImages] = useState<Record<string, string>>({});
@@ -56,8 +99,12 @@ export const DownloadAllQrModal: React.FC<DownloadAllQrModalProps> = ({
       const generated: Record<string, string> = {};
       for (const card of filteredCards) {
         try {
-          const shortUrl = `https://reviewtap.id/r/${card.code}?s=q`;
-          const dataUrl = await QRCode.toDataURL(shortUrl, {
+          const biz = businesses.find((b) => b.id === card.business_id);
+          // Sebelum diaktivasi: Link langsung ke Web Aktivasi!
+          const payload = getCardTargetPayload(card, biz, 'qr');
+          const targetUrl = payload.url;
+
+          const dataUrl = await QRCode.toDataURL(targetUrl, {
             width: 480,
             margin: 2,
             color: {
@@ -80,9 +127,9 @@ export const DownloadAllQrModal: React.FC<DownloadAllQrModalProps> = ({
     return () => {
       isMounted = false;
     };
-  }, [cards, filterType]);
+  }, [cards, businesses, filterType]);
 
-  // Handle ZIP download of all QR PNG files
+  // Handle ZIP download of all sticker PNG files
   const handleDownloadZip = async () => {
     if (filteredCards.length === 0) return;
 
@@ -92,48 +139,44 @@ export const DownloadAllQrModal: React.FC<DownloadAllQrModalProps> = ({
 
     try {
       const zip = new JSZip();
-      const folder = zip.folder('qrcode_reviewtap');
+      const folder = zip.folder('stiker_qr_reviewtap');
 
-      // Add README with printing instructions
+      // Add README info
       folder?.file(
-        'PANDUAN_CETAK.txt',
-        `PANDUAN CETAK QR CODE & NFC REVIEWTAP
+        'INFORMASI_STIKER.txt',
+        `STIKER QR CODE REVIEWTAP
 ================================================
-Jumlah Kartu: ${filteredCards.length}
-Format File: PNG Resolusi Tinggi (480x480 px, 300 DPI Siap Cetak)
-Payload URL: https://reviewtap.id/r/[KODE]?s=q
+Jumlah Stiker: ${filteredCards.length}
+Format File: PNG Resolusi Tinggi (600x700 px, Siap Cetak Stiker Mini)
+Konten Desain: QR Code + Kode Kartu Unik
 
-KEUNGGULAN QR CODE DINAMIS:
-- QR code yang sudah dicetak berlaku selamanya.
-- Jika toko berganti nama, pindah cabang, atau link ulasan berubah,
-  cukup ganti link di dashboard tanpa perlu mencetak ulang fisik QR.
-
-TIPS CETAK FISIK:
-1. Stand Akrilik Meja: Ukuran rekomendasi QR 3.5 cm x 3.5 cm hingga 5 cm x 5 cm.
-2. Kartu PVC / Stiker: Pastikan margin putih (quiet zone) minimal 2 mm di sekitar QR.
-3. Chip NFC: Untuk NFC Tag (NTAG213/215), tulis URL: https://reviewtap.id/r/[KODE]?s=n
+ALUR LINK QR CODE & NFC:
+- Sebelum diaktivasi: Scan QR / tap NFC langsung mengarah ke Web Aktivasi ReviewTap.
+  Formulir aktivasi akan otomatis terisi kode kartu bersangkutan.
+- Setelah diaktivasi: Link otomatis mengarah ke halaman ulasan Google bisnis terkait.
+- Link ulasan Google tujuan dapat diganti sewaktu-waktu di dashboard admin tanpa cetak ulang.
 `
       );
 
-      // Add each QR image to ZIP
+      // Add each sticker PNG to ZIP
       let count = 0;
       for (const card of filteredCards) {
-        let dataUrl = qrImages[card.code];
-        if (!dataUrl) {
-          const shortUrl = `https://reviewtap.id/r/${card.code}?s=q`;
-          dataUrl = await QRCode.toDataURL(shortUrl, {
-            width: 512,
+        let baseQr = qrImages[card.code];
+        if (!baseQr) {
+          const biz = businesses.find((b) => b.id === card.business_id);
+          const payload = getCardTargetPayload(card, biz, 'qr');
+          baseQr = await QRCode.toDataURL(payload.url, {
+            width: 480,
             margin: 2,
             color: { dark: '#0f172a', light: '#ffffff' },
             errorCorrectionLevel: 'M',
           });
         }
 
-        // Base64 to blob
-        const base64Data = dataUrl.replace(/^data:image\/png;base64,/, '');
-        const biz = businesses.find((b) => b.id === card.business_id);
-        const bizNamePart = biz ? `_${biz.nama.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 20)}` : '_siap_aktivasi';
-        const fileName = `QR_${card.code}${bizNamePart}.png`;
+        // Generate full sticker PNG (QR + #code)
+        const stickerDataUrl = await generateStickerPng(card.code, baseQr);
+        const base64Data = stickerDataUrl.replace(/^data:image\/png;base64,/, '');
+        const fileName = `Stiker_QR_${card.code}.png`;
 
         folder?.file(fileName, base64Data, { base64: true });
         count++;
@@ -148,14 +191,14 @@ TIPS CETAK FISIK:
       const url = URL.createObjectURL(content);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `reviewtap_qrcodes_${filteredCards.length}_kartu.zip`;
+      link.download = `stiker_qr_${filteredCards.length}_kartu.zip`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
 
       setIsZipping(false);
-      setDownloadSuccess(`Berhasil mengunduh ZIP berisi ${filteredCards.length} file QR Code!`);
+      setDownloadSuccess(`Berhasil mengunduh ZIP berisi ${filteredCards.length} file PNG stiker ringkas!`);
       setTimeout(() => setDownloadSuccess(null), 5000);
     } catch (err) {
       console.error('Error generating zip', err);
@@ -169,13 +212,15 @@ TIPS CETAK FISIK:
     window.print();
   };
 
-  // Download single QR code image
-  const handleDownloadSingle = (code: string) => {
-    const dataUrl = qrImages[code];
-    if (!dataUrl) return;
+  // Download single sticker PNG image
+  const handleDownloadSingle = async (code: string) => {
+    const rawQr = qrImages[code];
+    if (!rawQr) return;
+
+    const stickerPng = await generateStickerPng(code, rawQr);
     const link = document.createElement('a');
-    link.href = dataUrl;
-    link.download = `QR_${code}.png`;
+    link.href = stickerPng;
+    link.download = `Stiker_QR_${code}.png`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -209,7 +254,7 @@ TIPS CETAK FISIK:
           }
           @page {
             size: A4 portrait;
-            margin: 8mm;
+            margin: 6mm;
           }
         }
       `}</style>
@@ -224,13 +269,13 @@ TIPS CETAK FISIK:
               </div>
               <div>
                 <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                  <span>Unduh & Cetak QR Code Semua Kartu</span>
+                  <span>Unduh & Cetak Stiker QR Ringkas</span>
                   <span className="text-xs font-mono font-semibold bg-blue-50 text-blue-700 px-2.5 py-0.5 rounded-full border border-blue-200">
                     {filteredCards.length} Kartu
                   </span>
                 </h3>
                 <p className="text-xs text-slate-500">
-                  Unduh paket ZIP file gambar QR resolusi tinggi atau cetak lembar akrilik meja siap potong.
+                  Desain stiker ringkas grid mini (hanya QR code dan kode kartu) dalam format PNG siap cetak.
                 </p>
               </div>
             </div>
@@ -281,34 +326,6 @@ TIPS CETAK FISIK:
               </div>
             </div>
 
-            {/* Layout Mode */}
-            <div className="flex items-center gap-2">
-              <span className="font-semibold text-slate-700 flex items-center gap-1">
-                <Layers className="w-3.5 h-3.5 text-slate-500" />
-                <span>Desain Cetak:</span>
-              </span>
-              <div className="inline-flex p-1 bg-white border border-slate-200 rounded-lg">
-                <button
-                  type="button"
-                  onClick={() => setLayoutMode('standee')}
-                  className={`px-3 py-1 rounded font-medium transition-colors cursor-pointer ${
-                    layoutMode === 'standee' ? 'bg-slate-900 text-white font-semibold' : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  Stand Akrilik Meja (Lengkap)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setLayoutMode('sticker')}
-                  className={`px-3 py-1 rounded font-medium transition-colors cursor-pointer ${
-                    layoutMode === 'sticker' ? 'bg-slate-900 text-white font-semibold' : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  Stiker Ringkas (Grid Mini)
-                </button>
-              </div>
-            </div>
-
             {/* Main Action Buttons */}
             <div className="flex items-center gap-2 ml-auto">
               <button
@@ -327,7 +344,7 @@ TIPS CETAK FISIK:
                 className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-2xs transition-all cursor-pointer disabled:opacity-50"
               >
                 <FileArchive className="w-4 h-4" />
-                <span>{isZipping ? `Mengemas ZIP (${zipProgress}%)...` : 'Unduh Semua (.ZIP)'}</span>
+                <span>{isZipping ? `Mengemas ZIP (${zipProgress}%)...` : 'Unduh Semua PNG (.ZIP)'}</span>
               </button>
             </div>
           </div>
@@ -343,117 +360,48 @@ TIPS CETAK FISIK:
             </div>
           )}
 
-          {/* Preview Container */}
+          {/* Preview Container: Mini Grid of Compact Stickers */}
           <div className="flex-1 overflow-y-auto p-6 bg-slate-100/70">
             {filteredCards.length > 0 ? (
-              <div
-                className={`grid gap-4 ${
-                  layoutMode === 'standee'
-                    ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'
-                    : 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5'
-                }`}
-              >
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
                 {filteredCards.map((card) => {
-                  const business = businesses.find((b) => b.id === card.business_id);
                   const qrDataUrl = qrImages[card.code];
 
-                  if (layoutMode === 'standee') {
-                    return (
-                      <div
-                        key={card.code}
-                        className="bg-white rounded-xl border border-slate-300/80 p-5 shadow-sm space-y-3.5 relative flex flex-col justify-between group hover:border-blue-400 transition-all"
-                      >
-                        {/* Top Header Card */}
-                        <div className="text-center space-y-1">
-                          <div className="flex items-center justify-center gap-1 text-amber-500">
-                            {[1, 2, 3, 4, 5].map((s) => (
-                              <Star key={s} className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-                            ))}
-                          </div>
-                          <h4 className="font-bold text-slate-900 text-sm tracking-tight">
-                            Beri Ulasan Google
-                          </h4>
-                          <p className="text-[11px] text-slate-600 font-medium truncate px-1">
-                            {business ? business.nama : 'ReviewTap Smart Card'}
-                          </p>
-                        </div>
-
-                        {/* QR Image Box */}
-                        <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 flex flex-col items-center justify-center">
-                          {qrDataUrl ? (
-                            <img
-                              src={qrDataUrl}
-                              alt={`QR ${card.code}`}
-                              className="w-36 h-36 object-contain"
-                            />
-                          ) : (
-                            <div className="w-36 h-36 flex items-center justify-center text-slate-400 text-xs">
-                              Memuat QR...
-                            </div>
-                          )}
-                          <div className="mt-2 text-center">
-                            <span className="font-mono text-sm font-bold text-slate-900 tracking-wider">
-                              #{card.code}
-                            </span>
-                            <span className="text-[10px] text-slate-400 block font-mono">
-                              /r/{card.code}?s=q
-                            </span>
-                          </div>
-                        </div>
-
-                        {/* Card Footer NFC & Action */}
-                        <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px]">
-                          <span className="inline-flex items-center gap-1 text-slate-500">
-                            <Radio className="w-3 h-3 text-blue-600" />
-                            <span>Tap NFC / Scan QR</span>
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => handleDownloadSingle(card.code)}
-                            className="inline-flex items-center gap-1 font-semibold text-blue-600 hover:text-blue-800 cursor-pointer"
-                          >
-                            <Download className="w-3 h-3" />
-                            <span>Unduh PNG</span>
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  }
-
-                  // Compact Sticker Layout
                   return (
                     <div
                       key={card.code}
-                      className="bg-white rounded-lg border border-slate-300 p-3 shadow-2xs flex flex-col items-center text-center space-y-2 group hover:border-blue-400 transition-all"
+                      className="bg-white rounded-xl border border-slate-300 p-3 shadow-2xs flex flex-col items-center text-center justify-between group hover:border-blue-500 hover:shadow-md transition-all space-y-2"
                     >
-                      <div className="text-[10px] font-bold text-slate-800 tracking-tight">
-                        REVIEW GOOGLE
+                      {/* QR Image */}
+                      <div className="p-1 bg-white rounded-lg">
+                        {qrDataUrl ? (
+                          <img
+                            src={qrDataUrl}
+                            alt={`QR ${card.code}`}
+                            className="w-28 h-28 object-contain"
+                          />
+                        ) : (
+                          <div className="w-28 h-28 flex items-center justify-center text-slate-400 text-[10px]">
+                            Memuat...
+                          </div>
+                        )}
                       </div>
-                      {qrDataUrl ? (
-                        <img
-                          src={qrDataUrl}
-                          alt={`QR ${card.code}`}
-                          className="w-24 h-24 object-contain"
-                        />
-                      ) : (
-                        <div className="w-24 h-24 flex items-center justify-center text-slate-400 text-[10px]">
-                          Memuat...
-                        </div>
-                      )}
+
+                      {/* Card Code Only */}
                       <div>
-                        <span className="font-mono text-xs font-bold text-slate-900 block">
+                        <span className="font-mono text-xs font-bold text-slate-900 tracking-wider block">
                           #{card.code}
                         </span>
-                        <span className="text-[9px] text-slate-400 font-mono block">
-                          NFC + QR
-                        </span>
                       </div>
+
+                      {/* Action Button: Unduh PNG */}
                       <button
                         type="button"
                         onClick={() => handleDownloadSingle(card.code)}
-                        className="text-[10px] text-blue-600 hover:underline font-medium cursor-pointer"
+                        className="w-full mt-1 py-1.5 px-2 text-[11px] font-semibold text-blue-700 bg-blue-50 hover:bg-blue-600 hover:text-white rounded-lg border border-blue-200 transition-colors flex items-center justify-center gap-1 cursor-pointer"
                       >
-                        Unduh
+                        <Download className="w-3 h-3" />
+                        <span>Unduh PNG</span>
                       </button>
                     </div>
                   );
@@ -469,7 +417,7 @@ TIPS CETAK FISIK:
           {/* Modal Bottom Footer */}
           <div className="px-6 py-3.5 border-t border-slate-200 bg-white flex items-center justify-between text-xs">
             <div className="text-slate-500">
-              💡 <strong>Tips Cetak:</strong> File ZIP berisi gambar 300 DPI dengan nama file sesuai kode kartu fisik.
+              💡 <strong>Format PNG:</strong> Stiker ringkas resolusi tinggi berisi QR code dan kode kartu, siap cetak stiker mini.
             </div>
             <div className="flex items-center gap-2">
               <button
@@ -484,64 +432,38 @@ TIPS CETAK FISIK:
         </div>
       </div>
 
-      {/* Hidden container specifically styled for direct Print / Save as PDF */}
+      {/* Hidden container specifically styled for direct Print / Save as PDF: Mini Grid of compact stickers */}
       <div id="print-sheet-area" className="hidden">
-        <div className="p-4 space-y-4">
-          <div className="border-b pb-3 mb-4 flex items-center justify-between">
+        <div className="p-2 space-y-3">
+          <div className="border-b pb-2 mb-2 flex items-center justify-between text-xs">
             <div>
-              <h1 className="text-xl font-bold text-slate-900">ReviewTap NFC & QR Code Print Sheet</h1>
-              <p className="text-xs text-slate-500">Lembar Cetak Stand Akrilik / Kartu Fisik Ulasan Google</p>
+              <h1 className="text-sm font-bold text-slate-900">ReviewTap - Lembar Cetak Stiker QR Mini</h1>
             </div>
-            <div className="text-right text-xs text-slate-500 font-mono">
-              Total: {filteredCards.length} Kartu
+            <div className="text-right text-[11px] text-slate-600 font-mono">
+              Total: {filteredCards.length} Stiker
             </div>
           </div>
 
-          <div
-            className={`grid gap-4 ${
-              layoutMode === 'standee' ? 'grid-cols-2' : 'grid-cols-4'
-            }`}
-          >
+          <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-2">
             {filteredCards.map((card) => {
-              const business = businesses.find((b) => b.id === card.business_id);
               const qrDataUrl = qrImages[card.code];
 
               return (
                 <div
                   key={card.code}
-                  className="border-2 border-dashed border-slate-400 p-4 rounded-xl text-center flex flex-col justify-between items-center bg-white space-y-2 break-inside-avoid"
-                  style={{ minHeight: layoutMode === 'standee' ? '280px' : '160px' }}
+                  className="border border-dashed border-slate-400 p-2 rounded-lg text-center flex flex-col justify-between items-center bg-white space-y-1.5 break-inside-avoid"
+                  style={{ minHeight: '140px' }}
                 >
-                  <div className="space-y-0.5">
-                    <div className="text-xs font-black tracking-wider text-slate-900 uppercase">
-                      Beri Ulasan Google
-                    </div>
-                    <div className="text-xs font-bold text-blue-700 truncate max-w-[200px]">
-                      {business ? business.nama : 'ReviewTap Contactless'}
-                    </div>
-                    <div className="text-[10px] text-amber-500 font-bold">
-                      ★★★★★
-                    </div>
-                  </div>
-
                   {qrDataUrl && (
                     <img
                       src={qrDataUrl}
                       alt={card.code}
-                      className={layoutMode === 'standee' ? 'w-36 h-36' : 'w-24 h-24'}
+                      className="w-24 h-24 object-contain"
                     />
                   )}
 
-                  <div className="space-y-0.5">
-                    <div className="font-mono font-bold text-xs text-slate-900 tracking-wider">
-                      KODE: #{card.code}
-                    </div>
-                    <div className="text-[9px] text-slate-500 font-mono">
-                      https://reviewtap.id/r/{card.code}
-                    </div>
-                    <div className="text-[9px] text-slate-400 uppercase tracking-widest">
-                      Tempel HP (NFC) atau Scan QR
-                    </div>
+                  <div className="font-mono font-bold text-xs text-slate-900 tracking-wider">
+                    #{card.code}
                   </div>
                 </div>
               );

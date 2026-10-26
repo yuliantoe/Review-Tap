@@ -19,6 +19,7 @@ export interface Business {
   rating: number;
   total_ulasan_google: number;
   dibuat: string;
+  no_wa?: string; // Nomor WhatsApp bisnis/pemilik
 }
 
 export interface Card {
@@ -29,6 +30,8 @@ export interface Card {
   diaktifkan_pada: string | null;
   dibuat: string;
   catatan?: string;
+  pin_nfc?: string; // PIN proteksi / passcode chip NFC tag (misal: '1234')
+  no_wa?: string; // Nomor WhatsApp pemilik/kontak kartu
 }
 
 export interface ScanLog {

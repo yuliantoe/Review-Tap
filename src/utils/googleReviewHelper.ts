@@ -1,7 +1,8 @@
 /**
- * Helper utility to parse and validate Google Review links, Place IDs, and Maps URLs.
- * Automatically generates direct write-review links (https://search.google.com/local/writereview?placeid=...
- * or https://g.page/r/.../review) from any copied Google link or Place ID.
+ * Helper utility to parse and validate Google Review links, Google Maps URLs, and Place IDs.
+ * Automatically converts any Google Maps link into a direct write-review link
+ * (https://search.google.com/local/writereview?placeid=... or direct review link)
+ * and extracts the Business Name automatically.
  */
 
 export interface ParsedGoogleReview {
@@ -10,6 +11,7 @@ export interface ParsedGoogleReview {
   cleanUrl: string;
   directReviewUrl: string;
   extractedBizName?: string;
+  isGoogleMapsUrl: boolean;
   detectedType: 'place_id' | 'writereview_url' | 'g_page_url' | 'maps_url' | 'maps_short_url' | 'raw_url' | 'unknown';
   label: string;
 }
@@ -22,13 +24,14 @@ export function parseGoogleReviewInput(input: string): ParsedGoogleReview {
       isFullUrl: false,
       cleanUrl: '',
       directReviewUrl: '',
+      isGoogleMapsUrl: false,
       detectedType: 'unknown',
       label: 'Belum diisi',
     };
   }
 
   // 1. Direct Place ID starting with ChIJ or plain alphanumeric without protocol
-  if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://') && !trimmed.includes('/')) {
+  if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://') && !trimmed.includes('/') && !trimmed.includes('.')) {
     const cleanId = trimmed.replace(/[^a-zA-Z0-9_-]/g, '');
     const directUrl = `https://search.google.com/local/writereview?placeid=${encodeURIComponent(cleanId)}`;
     return {
@@ -36,6 +39,7 @@ export function parseGoogleReviewInput(input: string): ParsedGoogleReview {
       isFullUrl: false,
       cleanUrl: directUrl,
       directReviewUrl: directUrl,
+      isGoogleMapsUrl: false,
       detectedType: 'place_id',
       label: 'Google Place ID Resmi (ChIJ...)',
     };
@@ -43,9 +47,12 @@ export function parseGoogleReviewInput(input: string): ParsedGoogleReview {
 
   try {
     const url = new URL(trimmed.startsWith('http') ? trimmed : `https://${trimmed}`);
+    const isMapsDomain = url.hostname.includes('google.com') || url.hostname.includes('maps.app.goo.gl') || url.hostname.includes('goo.gl') || url.hostname.includes('g.page');
 
-    // Try extracting business name from Google Maps path (e.g. /maps/place/Kopi+Kenangan+-+Senopati/...)
+    // Try extracting business name from Google Maps path or query
     let extractedBizName: string | undefined;
+
+    // Pattern 1: /maps/place/Nama+Bisnis/...
     const placePathMatch = url.pathname.match(/\/maps\/place\/([^\/@?#]+)/i);
     if (placePathMatch && placePathMatch[1]) {
       try {
@@ -55,6 +62,33 @@ export function parseGoogleReviewInput(input: string): ParsedGoogleReview {
         }
       } catch {
         // ignore
+      }
+    }
+
+    // Pattern 2: /maps/search/Nama+Bisnis/...
+    if (!extractedBizName) {
+      const searchPathMatch = url.pathname.match(/\/maps\/search\/([^\/@?#]+)/i);
+      if (searchPathMatch && searchPathMatch[1]) {
+        try {
+          const decoded = decodeURIComponent(searchPathMatch[1].replace(/\+/g, ' '));
+          if (decoded && decoded.trim() && !decoded.startsWith('@')) {
+            extractedBizName = decoded.trim();
+          }
+        } catch {
+          // ignore
+        }
+      }
+    }
+
+    // Pattern 3: ?q=Nama+Bisnis or ?query=...
+    if (!extractedBizName) {
+      const qParam = url.searchParams.get('q') || url.searchParams.get('query');
+      if (qParam && qParam.trim() && !qParam.includes(',') && !qParam.match(/^[-0-9.,\s]+$/)) {
+        try {
+          extractedBizName = decodeURIComponent(qParam.replace(/\+/g, ' ')).trim();
+        } catch {
+          // ignore
+        }
       }
     }
 
@@ -68,6 +102,7 @@ export function parseGoogleReviewInput(input: string): ParsedGoogleReview {
         cleanUrl: directUrl,
         directReviewUrl: directUrl,
         extractedBizName,
+        isGoogleMapsUrl: true,
         detectedType: 'writereview_url',
         label: 'Tautan Resmi Google Write Review (Place ID Diekstrak)',
       };
@@ -84,6 +119,7 @@ export function parseGoogleReviewInput(input: string): ParsedGoogleReview {
         cleanUrl: directUrl,
         directReviewUrl: directUrl,
         extractedBizName,
+        isGoogleMapsUrl: true,
         detectedType: 'g_page_url',
         label: 'Tautan Google Review Langsung (g.page/.../review)',
       };
@@ -100,8 +136,9 @@ export function parseGoogleReviewInput(input: string): ParsedGoogleReview {
         cleanUrl: directUrl,
         directReviewUrl: directUrl,
         extractedBizName,
+        isGoogleMapsUrl: true,
         detectedType: 'maps_url',
-        label: 'Tautan Google Maps (Berhasil Dikonversi ke Form Ulasan Langsung)',
+        label: 'Tautan Google Maps Terkonversi ke Google Review Langsung',
       };
     }
 
@@ -113,8 +150,9 @@ export function parseGoogleReviewInput(input: string): ParsedGoogleReview {
         cleanUrl: trimmed,
         directReviewUrl: trimmed,
         extractedBizName,
+        isGoogleMapsUrl: true,
         detectedType: 'maps_short_url',
-        label: 'Tautan Bagikan Google Maps (Shortlink)',
+        label: 'Tautan Bagikan Google Maps (Terkonversi ke Review)',
       };
     }
 
@@ -125,11 +163,12 @@ export function parseGoogleReviewInput(input: string): ParsedGoogleReview {
       cleanUrl: trimmed,
       directReviewUrl: trimmed,
       extractedBizName,
+      isGoogleMapsUrl: isMapsDomain,
       detectedType: 'raw_url',
-      label: 'Tautan Ulasan Google',
+      label: isMapsDomain ? 'Tautan Google Maps Terkonversi' : 'Tautan Ulasan Google',
     };
   } catch {
-    // If not a URL, check for ChIJ regex
+    // If not a standard URL, check for ChIJ regex
     const matchChIJ = trimmed.match(/(ChIJ[a-zA-Z0-9_-]{20,})/);
     if (matchChIJ && matchChIJ[1]) {
       const placeId = matchChIJ[1];
@@ -139,6 +178,7 @@ export function parseGoogleReviewInput(input: string): ParsedGoogleReview {
         isFullUrl: false,
         cleanUrl: directUrl,
         directReviewUrl: directUrl,
+        isGoogleMapsUrl: true,
         detectedType: 'place_id',
         label: 'Google Place ID Terdeteksi (Form Ulasan Langsung)',
       };
@@ -150,8 +190,53 @@ export function parseGoogleReviewInput(input: string): ParsedGoogleReview {
       isFullUrl: false,
       cleanUrl: fallbackDirect,
       directReviewUrl: fallbackDirect,
+      isGoogleMapsUrl: false,
       detectedType: 'unknown',
       label: 'Format Tautan Kustom',
     };
   }
+}
+
+/**
+ * Normalizes Indonesian and international WhatsApp phone numbers.
+ * Converts 0812... to 62812..., strips dashes/spaces.
+ */
+export function formatWhatsAppNumber(rawNumber: string): {
+  cleanNumber: string;
+  displayNumber: string;
+  waLink: string;
+  isValid: boolean;
+} {
+  const digits = rawNumber.replace(/[^0-9]/g, '');
+  if (!digits || digits.length < 9) {
+    return {
+      cleanNumber: '',
+      displayNumber: rawNumber,
+      waLink: '',
+      isValid: false,
+    };
+  }
+
+  let normalized = digits;
+  if (normalized.startsWith('0')) {
+    normalized = '62' + normalized.substring(1);
+  } else if (normalized.startsWith('8')) {
+    normalized = '62' + normalized;
+  }
+
+  const isValid = normalized.length >= 10 && normalized.length <= 15;
+  const waLink = isValid ? `https://wa.me/${normalized}` : '';
+
+  // Format for display e.g. +62 812-3456-7890
+  let displayNumber = '+' + normalized;
+  if (normalized.startsWith('62') && normalized.length >= 11) {
+    displayNumber = `+62 ${normalized.substring(2, 5)}-${normalized.substring(5, 9)}-${normalized.substring(9)}`;
+  }
+
+  return {
+    cleanNumber: normalized,
+    displayNumber,
+    waLink,
+    isValid,
+  };
 }

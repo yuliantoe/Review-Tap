@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useReviewTap } from '../context/ReviewTapContext';
 import { Card, Business } from '../types';
-import { parseGoogleReviewInput } from '../utils/googleReviewHelper';
+import { parseGoogleReviewInput, formatWhatsAppNumber } from '../utils/googleReviewHelper';
 import {
   X,
   Link2,
@@ -13,6 +13,10 @@ import {
   Sparkles,
   QrCode,
   Smartphone,
+  KeyRound,
+  MessageCircle,
+  Phone,
+  RefreshCw,
 } from 'lucide-react';
 
 interface EditCardLinkModalProps {
@@ -28,7 +32,14 @@ export const EditCardLinkModal: React.FC<EditCardLinkModalProps> = ({
   onSuccess,
   onSimulate,
 }) => {
-  const { businesses, updateCardBusiness, updateCardStatus, addBusiness } = useReviewTap();
+  const {
+    businesses,
+    updateCardBusiness,
+    updateCardStatus,
+    updateCardPin,
+    updateCardWhatsApp,
+    addBusiness,
+  } = useReviewTap();
 
   // Find current connected business
   const currentBusiness = businesses.find((b) => b.id === card.business_id);
@@ -41,6 +52,8 @@ export const EditCardLinkModal: React.FC<EditCardLinkModalProps> = ({
   const [manualReviewLink, setManualReviewLink] = useState<string>(
     currentBusiness?.place_id ? `https://search.google.com/local/writereview?placeid=${currentBusiness.place_id}` : ''
   );
+  const [pinNfc, setPinNfc] = useState<string>(card.pin_nfc || '1234');
+  const [noWhatsApp, setNoWhatsApp] = useState<string>(card.no_wa || currentBusiness?.no_wa || '');
   const [pasteFeedback, setPasteFeedback] = useState<string | null>(null);
 
   // Mode 2: Existing Business selection
@@ -147,6 +160,12 @@ export const EditCardLinkModal: React.FC<EditCardLinkModalProps> = ({
       if (card.status !== 'aktif') {
         updateCardStatus(card.code, 'aktif');
       }
+      if (pinNfc.trim()) {
+        updateCardPin(card.code, pinNfc.trim());
+      }
+      if (noWhatsApp.trim()) {
+        updateCardWhatsApp(card.code, noWhatsApp.trim());
+      }
       setIsSubmitting(false);
       setSuccessData({
         bizName: finalBizName,
@@ -250,19 +269,55 @@ export const EditCardLinkModal: React.FC<EditCardLinkModalProps> = ({
                 <div className="space-y-4 pt-1">
                   {/* Nama Bisnis */}
                   <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
-                      <Building2 className="w-3.5 h-3.5 text-blue-600" />
-                      <span>Nama Bisnis / Gerai *</span>
-                    </label>
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
+                        <Building2 className="w-3.5 h-3.5 text-blue-600" />
+                        <span>Nama Bisnis / Tautan Google Maps *</span>
+                      </label>
+                      <span className="text-[10px] text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
+                        ⚡ Auto-Convert Maps → Review
+                      </span>
+                    </div>
                     <input
                       type="text"
                       required
                       value={manualBizName}
                       onChange={(e) => {
-                        setManualBizName(e.target.value);
+                        const val = e.target.value;
                         setFormError(null);
+                        const isUrl = val.includes('http') || val.includes('maps') || val.includes('goo.gl');
+                        if (isUrl) {
+                          const parsed = parseGoogleReviewInput(val);
+                          if (parsed.extractedBizName) {
+                            setManualBizName(parsed.extractedBizName);
+                          } else {
+                            setManualBizName(val);
+                          }
+                          if (parsed.directReviewUrl) {
+                            setManualReviewLink(parsed.directReviewUrl);
+                            setPasteFeedback('⚡ Tautan Google Maps terkonversi ke Google Review!');
+                            setTimeout(() => setPasteFeedback(null), 3500);
+                          }
+                        } else {
+                          setManualBizName(val);
+                        }
                       }}
-                      placeholder="misal: Kopi Kenangan Mall Kelapa Gading"
+                      onPaste={(e) => {
+                        const text = e.clipboardData.getData('text');
+                        if (text && (text.includes('http') || text.includes('maps') || text.includes('goo.gl'))) {
+                          const parsed = parseGoogleReviewInput(text.trim());
+                          if (parsed.extractedBizName) {
+                            e.preventDefault();
+                            setManualBizName(parsed.extractedBizName);
+                          }
+                          if (parsed.directReviewUrl) {
+                            setManualReviewLink(parsed.directReviewUrl);
+                            setPasteFeedback('⚡ Tautan Google Maps berhasil terkonversi!');
+                            setTimeout(() => setPasteFeedback(null), 3500);
+                          }
+                        }
+                      }}
+                      placeholder="Nama Toko ATAU Tempel Link Google Maps (misal: https://maps.app.goo.gl/...)"
                       className="w-full text-xs font-medium p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 focus:outline-hidden focus:border-blue-500 focus:bg-white"
                     />
                   </div>
@@ -407,6 +462,53 @@ export const EditCardLinkModal: React.FC<EditCardLinkModalProps> = ({
                   )}
                 </div>
               )}
+
+              {/* PIN NFC & WhatsApp inputs */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3 border-t border-slate-200/80">
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-semibold text-slate-700 flex items-center gap-1">
+                      <KeyRound className="w-3.5 h-3.5 text-blue-600" />
+                      <span>PIN NFC Tag</span>
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setPinNfc(String(Math.floor(1000 + Math.random() * 9000)))}
+                      className="text-[10px] text-blue-600 hover:text-blue-800 flex items-center gap-1 cursor-pointer font-semibold"
+                    >
+                      <RefreshCw className="w-2.5 h-2.5" />
+                      <span>Acak</span>
+                    </button>
+                  </div>
+                  <input
+                    type="text"
+                    maxLength={8}
+                    value={pinNfc}
+                    onChange={(e) => setPinNfc(e.target.value.replace(/[^0-9]/g, ''))}
+                    placeholder="misal: 1234"
+                    className="w-full text-xs font-mono font-bold tracking-wider p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 focus:outline-hidden focus:border-blue-500"
+                  />
+                  <p className="text-[10px] text-slate-400">PIN proteksi chip NFC.</p>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-slate-700 flex items-center gap-1">
+                    <MessageCircle className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>No WhatsApp</span>
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="tel"
+                      value={noWhatsApp}
+                      onChange={(e) => setNoWhatsApp(e.target.value)}
+                      placeholder="081234567890"
+                      className="w-full text-xs font-medium p-2.5 pl-8 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 focus:outline-hidden focus:border-blue-500"
+                    />
+                    <Phone className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                  </div>
+                  <p className="text-[10px] text-slate-400">Kontak WhatsApp pemilik kartu.</p>
+                </div>
+              </div>
 
               {/* Error message */}
               {formError && (

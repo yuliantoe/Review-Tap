@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useReviewTap } from '../context/ReviewTapContext';
 import { Business } from '../types';
-import { parseGoogleReviewInput } from '../utils/googleReviewHelper';
+import { parseGoogleReviewInput, formatWhatsAppNumber } from '../utils/googleReviewHelper';
 import {
   Building2,
   Plus,
@@ -16,6 +16,8 @@ import {
   Check,
   X,
   Compass,
+  MessageCircle,
+  Phone,
 } from 'lucide-react';
 
 export const BusinessView: React.FC = () => {
@@ -28,11 +30,13 @@ export const BusinessView: React.FC = () => {
   const [nama, setNama] = useState('');
   const [placeId, setPlaceId] = useState('');
   const [pemilikEmail, setPemilikEmail] = useState('');
+  const [noWa, setNoWa] = useState('');
   const [kategori, setKategori] = useState('Kafe & Resto');
   const [kota, setKota] = useState('Jakarta Selatan');
   const [alamat, setAlamat] = useState('');
   const [rating, setRating] = useState(4.8);
   const [totalUlasan, setTotalUlasan] = useState(120);
+  const [mapsConvertedNotice, setMapsConvertedNotice] = useState<string | null>(null);
 
   // Sample Place IDs for quick fill
   const samplePresets = [
@@ -42,6 +46,7 @@ export const BusinessView: React.FC = () => {
       kategori: 'Kafe & Minuman',
       kota: 'Jakarta Selatan',
       alamat: 'Jl. Senopati No. 42, Kebayoran Baru',
+      no_wa: '081298765432',
     },
     {
       nama: 'Resto Padang Sederhana Thamrin',
@@ -49,6 +54,7 @@ export const BusinessView: React.FC = () => {
       kategori: 'Restoran Keluarga',
       kota: 'Jakarta Pusat',
       alamat: 'Jl. M.H. Thamrin No. 8',
+      no_wa: '081345678901',
     },
     {
       nama: 'Bumi Artisan Bakery Menteng',
@@ -56,6 +62,7 @@ export const BusinessView: React.FC = () => {
       kategori: 'Bakery & Pastry',
       kota: 'Jakarta Pusat',
       alamat: 'Jl. Cikini Raya No. 18',
+      no_wa: '081876543210',
     },
     {
       nama: 'Klinik Gigi Harmoni Kemang',
@@ -63,6 +70,7 @@ export const BusinessView: React.FC = () => {
       kategori: 'Klinik Kesehatan',
       kota: 'Jakarta Selatan',
       alamat: 'Jl. Kemang Raya No. 25B',
+      no_wa: '081122334455',
     },
   ];
 
@@ -72,17 +80,40 @@ export const BusinessView: React.FC = () => {
     setKategori(preset.kategori);
     setKota(preset.kota);
     setAlamat(preset.alamat);
+    setNoWa(preset.no_wa);
     setPemilikEmail(`admin@${preset.nama.toLowerCase().replace(/[^a-z]/g, '')}.id`);
+    setMapsConvertedNotice(null);
+  };
+
+  const handleNamaChange = (val: string) => {
+    // Check if input is a Google Maps link or contains http
+    if (val.includes('http://') || val.includes('https://') || val.includes('maps.app.goo.gl') || val.includes('google.com/maps')) {
+      const parsed = parseGoogleReviewInput(val);
+      if (parsed.extractedBizName) {
+        setNama(parsed.extractedBizName);
+      }
+      if (parsed.placeId) {
+        setPlaceId(parsed.placeId);
+      }
+      setMapsConvertedNotice(
+        `Link Google Maps terdeteksi! Diekstrak: "${parsed.extractedBizName || 'Nama Bisnis'}" dan tautan Google Review langsung terisi.`
+      );
+    } else {
+      setNama(val);
+    }
   };
 
   const handleCreateBusiness = (e: React.FormEvent) => {
     e.preventDefault();
     if (!nama.trim() || !placeId.trim()) return;
 
+    const waData = formatWhatsAppNumber(noWa);
+
     addBusiness({
       nama: nama.trim(),
       place_id: placeId.trim(),
       pemilik_email: pemilikEmail.trim() || 'pemilik@bisnis.id',
+      no_wa: waData.cleanNumber || noWa.trim() || undefined,
       kategori,
       kota,
       alamat: alamat.trim() || `${kota}, Indonesia`,
@@ -94,7 +125,9 @@ export const BusinessView: React.FC = () => {
     setNama('');
     setPlaceId('');
     setPemilikEmail('');
+    setNoWa('');
     setAlamat('');
+    setMapsConvertedNotice(null);
     setIsAdding(false);
   };
 
@@ -113,7 +146,7 @@ export const BusinessView: React.FC = () => {
 
         <button
           onClick={() => setIsAdding(!isAdding)}
-          className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-xs transition-colors"
+          className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-[#FF6B35] hover:bg-[#F25A24] rounded-full shadow-sm shadow-orange-500/25 transition-all hover:scale-[1.01] cursor-pointer"
         >
           {isAdding ? <X className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
           <span>{isAdding ? 'Tutup Formulir' : 'Tambah Bisnis Baru'}</span>
@@ -176,19 +209,32 @@ export const BusinessView: React.FC = () => {
           </div>
 
           <form onSubmit={handleCreateBusiness} className="space-y-4">
+            {mapsConvertedNotice && (
+              <div className="p-2.5 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-800 text-xs flex items-center gap-2 animate-in fade-in">
+                <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>{mapsConvertedNotice}</span>
+              </div>
+            )}
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Nama Bisnis (Sesuai Google Maps) *
-                </label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-semibold text-slate-700">
+                    Nama Bisnis (atau Tempel Link Google Maps) *
+                  </label>
+                  <span className="text-[10px] text-blue-600 font-medium">Auto-Konversi Maps</span>
+                </div>
                 <input
                   type="text"
                   required
                   value={nama}
-                  onChange={(e) => setNama(e.target.value)}
-                  placeholder="misal: Kafe Kopi Kenangan Senopati"
+                  onChange={(e) => handleNamaChange(e.target.value)}
+                  placeholder="Ketik nama bisnis ATAU tempel link Google Maps..."
                   className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 focus:outline-hidden focus:border-blue-500 focus:bg-white"
                 />
+                <p className="text-[10px] text-slate-400 mt-1">
+                  Jika menempel link Google Maps, nama bisnis dan link ulasan langsung terkonversi otomatis.
+                </p>
               </div>
 
               <div>
@@ -206,6 +252,9 @@ export const BusinessView: React.FC = () => {
                     const raw = e.target.value;
                     const parsed = parseGoogleReviewInput(raw);
                     setPlaceId(parsed.placeId || raw);
+                    if (parsed.extractedBizName && !nama) {
+                      setNama(parsed.extractedBizName);
+                    }
                   }}
                   placeholder="misal: https://search.google.com/local/writereview?placeid=ChIJ... atau ChIJ..."
                   className="w-full text-xs font-mono p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 focus:outline-hidden focus:border-blue-500 focus:bg-white"
@@ -213,6 +262,29 @@ export const BusinessView: React.FC = () => {
                 <p className="text-[10px] text-slate-400 mt-1">
                   Tempel link ulasan atau Place ID resmi (ChIJ...). Sistem akan mengekstrak otomatis.
                 </p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Nomor WhatsApp Bisnis (Untuk Kontak & Pesan)
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <MessageCircle className="w-4 h-4 text-emerald-600" />
+                  </div>
+                  <input
+                    type="tel"
+                    value={noWa}
+                    onChange={(e) => setNoWa(e.target.value)}
+                    placeholder="misal: 081234567890"
+                    className="w-full text-xs pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 focus:outline-hidden focus:border-blue-500 focus:bg-white"
+                  />
+                </div>
+                {noWa && (
+                  <p className="text-[10px] text-emerald-700 font-medium mt-1">
+                    Format: {formatWhatsAppNumber(noWa).displayNumber || noWa}
+                  </p>
+                )}
               </div>
 
               <div>
@@ -254,7 +326,7 @@ export const BusinessView: React.FC = () => {
                 />
               </div>
 
-              <div>
+              <div className="md:col-span-2">
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
                   Alamat Lengkap
                 </label>
@@ -278,7 +350,7 @@ export const BusinessView: React.FC = () => {
               </button>
               <button
                 type="submit"
-                className="px-4 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-xs transition-colors"
+                className="px-6 py-2.5 text-xs font-semibold text-white bg-[#FF6B35] hover:bg-[#F25A24] rounded-full shadow-sm shadow-orange-500/25 transition-all hover:scale-[1.01] cursor-pointer"
               >
                 Simpan Bisnis
               </button>
@@ -293,15 +365,16 @@ export const BusinessView: React.FC = () => {
           const bizCards = cards.filter((c) => c.business_id === biz.id);
           const activeBizCards = bizCards.filter((c) => c.status === 'aktif');
           const googleUrl = `https://search.google.com/local/writereview?placeid=${encodeURIComponent(biz.place_id)}`;
+          const waFormatted = biz.no_wa ? formatWhatsAppNumber(biz.no_wa) : null;
 
           return (
             <div
               key={biz.id}
-              className="bg-white rounded-xl border border-slate-200 shadow-xs hover:border-slate-300 transition-all p-5 flex flex-col justify-between space-y-4"
+              className="bg-white rounded-2xl border border-stone-200/80 shadow-xs hover:border-stone-300 transition-all p-5 flex flex-col justify-between space-y-4"
             >
               <div className="space-y-2.5">
                 <div className="flex items-start justify-between gap-2">
-                  <div className="w-9 h-9 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                  <div className="w-9 h-9 rounded-xl bg-[#FFF0EB] text-[#FF6B35] flex items-center justify-center shrink-0">
                     <Building2 className="w-5 h-5" />
                   </div>
                   <div className="flex items-center gap-1.5 text-xs">
@@ -333,6 +406,21 @@ export const BusinessView: React.FC = () => {
                     <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
                     <span className="text-[11px] leading-tight text-slate-600">{biz.alamat}</span>
                   </div>
+                  {waFormatted && waFormatted.isValid && (
+                    <div className="flex items-center gap-2">
+                      <MessageCircle className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                      <a
+                        href={waFormatted.waLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[11px] font-medium text-emerald-700 hover:text-emerald-800 hover:underline flex items-center gap-1"
+                        title="Buka Chat WhatsApp"
+                      >
+                        <span>WhatsApp: {waFormatted.displayNumber}</span>
+                        <ExternalLink className="w-2.5 h-2.5" />
+                      </a>
+                    </div>
+                  )}
                   <div className="flex items-center gap-2">
                     <Mail className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                     <span className="text-[11px] font-mono text-slate-600">{biz.pemilik_email}</span>

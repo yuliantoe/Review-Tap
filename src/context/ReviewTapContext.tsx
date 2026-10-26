@@ -41,9 +41,11 @@ interface ReviewTapContextType {
 
   // Actions
   batchCreateCards: (count: number, tipe: CardType) => Card[];
-  activateCard: (code: string, businessId: string) => boolean;
+  activateCard: (code: string, businessId: string, options?: { pinNfc?: string; noWa?: string }) => boolean;
   updateCardStatus: (code: string, status: CardStatus) => void;
   updateCardBusiness: (code: string, businessId: string | null) => void;
+  updateCardPin: (code: string, pin: string) => void;
+  updateCardWhatsApp: (code: string, noWa: string) => void;
   deleteCard: (code: string) => void;
 
   addBusiness: (biz: Omit<Business, 'id' | 'dibuat'>) => Business;
@@ -304,6 +306,7 @@ export const ReviewTapProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     for (let i = 0; i < count; i++) {
       const code = generateCardCode(existingCodes);
       existingCodes.add(code);
+      const defaultPin = String(Math.floor(1000 + Math.random() * 9000));
       const card: Card = {
         code,
         business_id: null,
@@ -312,6 +315,7 @@ export const ReviewTapProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         diaktifkan_pada: null,
         dibuat: nowIso,
         catatan: 'Belum diaktifkan. Tulis ke NFC / Cetak QR',
+        pin_nfc: defaultPin,
       };
       newCards.push(card);
     }
@@ -321,7 +325,11 @@ export const ReviewTapProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   };
 
   // Activate Card (Step 3 & 4 in workflow)
-  const activateCard = (code: string, businessId: string): boolean => {
+  const activateCard = (
+    code: string,
+    businessId: string,
+    options?: { pinNfc?: string; noWa?: string }
+  ): boolean => {
     const card = cards.find((c) => c.code.toUpperCase() === code.toUpperCase());
     if (!card) return false;
 
@@ -334,6 +342,8 @@ export const ReviewTapProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             business_id: businessId,
             status: 'aktif',
             diaktifkan_pada: nowIso,
+            pin_nfc: options?.pinNfc || c.pin_nfc || '1234',
+            no_wa: options?.noWa || c.no_wa,
           };
         }
         return c;
@@ -365,6 +375,18 @@ export const ReviewTapProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const updateCardBusiness = (code: string, businessId: string | null) => {
     setCards((prev) =>
       prev.map((c) => (c.code === code ? { ...c, business_id: businessId } : c))
+    );
+  };
+
+  const updateCardPin = (code: string, pin: string) => {
+    setCards((prev) =>
+      prev.map((c) => (c.code === code ? { ...c, pin_nfc: pin } : c))
+    );
+  };
+
+  const updateCardWhatsApp = (code: string, noWa: string) => {
+    setCards((prev) =>
+      prev.map((c) => (c.code === code ? { ...c, no_wa: noWa } : c))
     );
   };
 
@@ -706,6 +728,8 @@ export const ReviewTapProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         activateCard,
         updateCardStatus,
         updateCardBusiness,
+        updateCardPin,
+        updateCardWhatsApp,
         deleteCard,
         addBusiness,
         updateBusiness,

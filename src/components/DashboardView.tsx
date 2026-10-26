@@ -130,32 +130,32 @@ export const DashboardView: React.FC = () => {
         </div>
 
         {/* Metric 2: Rasio NFC vs QR */}
-        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs space-y-2">
-          <div className="flex items-center justify-between text-xs text-slate-500">
+        <div className="bg-white p-5 rounded-2xl border border-stone-200/80 shadow-xs space-y-2">
+          <div className="flex items-center justify-between text-xs text-stone-500">
             <span>Rasio Sumber Masuk</span>
-            <Radio className="w-4 h-4 text-blue-600" />
+            <Radio className="w-4 h-4 text-[#FF6B35]" />
           </div>
           <div className="flex items-baseline gap-2">
-            <span className="text-2xl font-bold font-mono tabular-nums text-slate-900">
+            <span className="text-2xl font-bold font-mono tabular-nums text-stone-900">
               {statsSummary.nfcRatio.toFixed(0)}% NFC
             </span>
-            <span className="text-xs text-slate-500 font-mono tabular-nums">
+            <span className="text-xs text-stone-500 font-mono tabular-nums">
               · {statsSummary.qrRatio.toFixed(0)}% QR
             </span>
           </div>
-          <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden flex">
+          <div className="w-full bg-stone-100 h-1.5 rounded-full overflow-hidden flex">
             <div
-              className="bg-blue-600 h-full transition-all duration-300"
+              className="bg-[#FF6B35] h-full transition-all duration-300"
               style={{ width: `${statsSummary.nfcRatio}%` }}
               title={`NFC: ${statsSummary.nfcScans}`}
             />
             <div
-              className="bg-indigo-400 h-full transition-all duration-300"
+              className="bg-[#FFB199] h-full transition-all duration-300"
               style={{ width: `${statsSummary.qrRatio}%` }}
               title={`QR: ${statsSummary.qrScans}`}
             />
           </div>
-          <p className="text-[11px] text-slate-400">
+          <p className="text-[11px] text-stone-400">
             {statsSummary.nfcScans} tap NFC · {statsSummary.qrScans} pindai QR
           </p>
         </div>
@@ -209,13 +209,13 @@ export const DashboardView: React.FC = () => {
             </p>
           </div>
 
-          <div className="flex items-center gap-4 text-xs font-medium text-slate-600">
+          <div className="flex items-center gap-4 text-xs font-medium text-stone-600">
             <div className="flex items-center gap-1.5">
-              <span className="w-3 h-3 bg-blue-600 rounded-sm" />
+              <span className="w-3 h-3 bg-[#FF6B35] rounded-sm" />
               <span>NFC Tap ({statsSummary.nfcScans})</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <span className="w-3 h-3 bg-indigo-300 rounded-sm" />
+              <span className="w-3 h-3 bg-[#FFB199] rounded-sm" />
               <span>QR Code ({statsSummary.qrScans})</span>
             </div>
           </div>
@@ -223,7 +223,7 @@ export const DashboardView: React.FC = () => {
 
         {/* Interactive Visual Bar Chart */}
         <div className="pt-4">
-          <div className="h-64 flex items-end gap-1 sm:gap-2 border-b border-slate-200 pb-2">
+          <div className="h-64 flex items-end gap-1 sm:gap-2 border-b border-stone-200 pb-2">
             {statsSummary.dailyStats.map((day, idx) => {
               const totalHeightPercent = (day.total / maxDailyScan) * 100;
               const nfcPortionPercent = day.total > 0 ? (day.nfc / day.total) * 100 : 0;
@@ -238,32 +238,32 @@ export const DashboardView: React.FC = () => {
                 >
                   {/* Tooltip on hover */}
                   {isHovered && (
-                    <div className="absolute -top-16 z-20 bg-slate-900 text-white text-[11px] px-2.5 py-1.5 rounded-lg shadow-lg pointer-events-none whitespace-nowrap animate-in fade-in duration-150">
+                    <div className="absolute -top-16 z-20 bg-stone-900 text-white text-[11px] px-2.5 py-1.5 rounded-lg shadow-lg pointer-events-none whitespace-nowrap animate-in fade-in duration-150">
                       <p className="font-semibold">{day.displayDate}</p>
-                      <p className="font-mono tabular-nums text-slate-300">
+                      <p className="font-mono tabular-nums text-stone-300">
                         Total: {day.total} (NFC: {day.nfc}, QR: {day.qr})
                       </p>
                     </div>
                   )}
 
                   {/* Number above bar */}
-                  <span className="text-[10px] font-mono tabular-nums text-slate-400 group-hover:text-slate-800 mb-1">
+                  <span className="text-[10px] font-mono tabular-nums text-stone-400 group-hover:text-stone-800 mb-1">
                     {day.total}
                   </span>
 
                   {/* Stacked Bar Container */}
                   <div
-                    className="w-full max-w-[36px] bg-slate-100 rounded-t-sm flex flex-col justify-end overflow-hidden transition-all duration-200 group-hover:brightness-95"
+                    className="w-full max-w-[36px] bg-stone-100 rounded-t-sm flex flex-col justify-end overflow-hidden transition-all duration-200 group-hover:brightness-95"
                     style={{ height: `${Math.max(totalHeightPercent, 4)}%` }}
                   >
                     {/* QR segment (top) */}
                     <div
-                      className="w-full bg-indigo-300 transition-all duration-200"
+                      className="w-full bg-[#FFB199] transition-all duration-200"
                       style={{ height: `${100 - nfcPortionPercent}%` }}
                     />
                     {/* NFC segment (bottom) */}
                     <div
-                      className="w-full bg-blue-600 transition-all duration-200"
+                      className="w-full bg-[#FF6B35] transition-all duration-200"
                       style={{ height: `${nfcPortionPercent}%` }}
                     />
                   </div>
@@ -273,7 +273,7 @@ export const DashboardView: React.FC = () => {
           </div>
 
           {/* Date Axis Labels */}
-          <div className="flex gap-1 sm:gap-2 pt-2 text-[10px] text-slate-500 font-mono">
+          <div className="flex gap-1 sm:gap-2 pt-2 text-[10px] text-stone-500 font-mono">
             {statsSummary.dailyStats.map((day) => (
               <div key={day.date} className="flex-1 text-center truncate">
                 {day.displayDate.split(' ')[0]}
@@ -286,17 +286,17 @@ export const DashboardView: React.FC = () => {
       {/* Two Column Grid: Per Bisnis Breakdown & Live Scan Activity Feed */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Left Column: Per Bisnis Breakdown (7 cols) */}
-        <div className="lg:col-span-7 bg-white p-6 rounded-xl border border-slate-200 shadow-xs space-y-4">
+        <div className="lg:col-span-7 bg-white p-6 rounded-2xl border border-stone-200/80 shadow-xs space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-base font-semibold text-slate-900">Scan Per Bisnis</h3>
-              <p className="text-xs text-slate-500 mt-0.5">
+              <h3 className="text-base font-semibold text-stone-900">Scan Per Bisnis</h3>
+              <p className="text-xs text-stone-500 mt-0.5">
                 Dashboard menghitung scan yang melewati link pendek. Angka ulasan riil dibaca dari Google Business Profile.
               </p>
             </div>
             <button
               onClick={() => setActiveTab('businesses')}
-              className="text-xs font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1 shrink-0"
+              className="text-xs font-semibold text-[#FF6B35] hover:text-[#F25A24] flex items-center gap-1 shrink-0 cursor-pointer"
             >
               <span>Kelola Bisnis</span>
               <ChevronRight className="w-3.5 h-3.5" />

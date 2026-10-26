@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useReviewTap } from '../context/ReviewTapContext';
 import { CardType } from '../types';
+import { getCardActivationWebUrl } from '../utils/cardUrlHelper';
 import { X, Layers, CheckCircle2, QrCode as QrIcon } from 'lucide-react';
 
 interface BatchGeneratorModalProps {
@@ -165,9 +166,15 @@ export const BatchGeneratorModal: React.FC<BatchGeneratorModalProps> = ({ onClos
               </div>
             </div>
 
-            <p className="text-[11px] text-slate-500">
-              Tulis rekaman NDEF tipe URL: <code className="bg-slate-100 px-1 py-0.5 rounded text-blue-700 font-mono">https://reviewtap.id/r/[KODE]?s=n</code> ke tag NTAG213/215.
-            </p>
+            <div className="bg-blue-50/70 border border-blue-200/80 rounded-lg p-2.5 text-[11px] text-blue-900 space-y-1">
+              <span className="font-semibold block text-blue-950">Rekaman NDEF URL untuk Chip NFC (Sebelum Aktivasi):</span>
+              <code className="bg-white px-2 py-1 rounded text-blue-700 font-mono font-bold block border border-blue-200 break-all">
+                {getCardActivationWebUrl('[KODE]', 'nfc')}
+              </code>
+              <span className="text-[10px] text-blue-700 block">
+                Saat ditempel HP, browser langsung membuka Web Aktivasi ReviewTap dengan kode kartu terisi otomatis.
+              </span>
+            </div>
 
             <div className="pt-3 flex items-center justify-end gap-2 border-t border-slate-100">
               <button
